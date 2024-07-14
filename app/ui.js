@@ -56,7 +56,6 @@ const UI = {
 
     // Render default UI and initialize settings menu
     start() {
-
         UI.initSettings();
 
         // Translate the DOM
@@ -108,6 +107,7 @@ const UI = {
         UI.addConnectionControlHandlers();
         UI.addClipboardHandlers();
         UI.addSettingsHandlers();
+        UI.addStatusHandlers();
         document.getElementById("noVNC_status")
             .addEventListener('click', UI.hideStatus);
 
@@ -129,6 +129,9 @@ const UI = {
             // Show the connect panel on first load unless autoconnecting
             UI.openConnectPanel();
         }
+
+        // Automatically connect 
+        UI.connect();
 
         return Promise.resolve(UI.rfb);
     },
@@ -337,6 +340,11 @@ const UI = {
             .addEventListener('click', UI.toggleClipboardPanel);
         document.getElementById("noVNC_clipboard_text")
             .addEventListener('change', UI.clipboardSend);
+    },
+
+    addStatusHandlers() {
+        document.getElementById("submit_success")
+            .addEventListener('click', UI.reportSuccess);
     },
 
     // Add a call to save settings when the element changes,
@@ -1000,7 +1008,7 @@ const UI = {
     },
 
     connect(event, password) {
-
+        console.log("Inside of connect function");
         // Ignore when rfb already exists
         if (typeof UI.rfb !== 'undefined') {
             return;

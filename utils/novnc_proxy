@@ -1,8 +1,58 @@
 #!/usr/bin/env bash
 
+# Function to handle cleanup and shutdown
+cleanup() {
+    echo "Shutting down noVNC server..."
+    if [ -n "$proxy_pid" ]; then
+        kill "$proxy_pid"
+    fi
+    if [ -n "$server_pid" ]; then
+        kill "$server_pid"
+    fi
+    exit 0
+}
+
+# Function to check status from the log file
+check_status() {
+    if [ -f /path/to/status.log ]; then
+        status=$(cat /status.log)
+        echo "Task status: $status"
+        case $status in
+            success)
+                exit 0
+                ;;
+            retry)
+                exit 1
+                ;;
+            failure)
+                exit 2
+                ;;
+            *)
+                echo "Unknown status"
+                exit 3
+                ;;
+        esac
+    else
+        echo "Status log not found"
+        exit 4
+    fi
+}
+
+# Start a simple web server to listen for shutdown requests
+start_web_server() {
+    while true; do
+        echo -e "HTTP/1.1 200 OK\n\n" | nc -l -p 8080 -q 1 | while read -r line; do
+            echo "$line" | grep -q "POST /shutdown" && cleanup
+        done
+    done &
+    server_pid="$!"
+}
+
+start_web_server
+
 # Copyright (C) 2018 The noVNC Authors
 # Licensed under MPL 2.0 or any later version (see LICENSE.txt)
-
+echo "Starting noVNC..."
 usage() {
     if [ "$*" ]; then
         echo "$*"
@@ -66,6 +116,7 @@ AUTHPLUGIN_ARG=""
 AUTHSOURCE_ARG=""
 FILEONLY_ARG=""
 
+echo $HERE
 
 die() {
     echo "$*"
@@ -108,6 +159,16 @@ while [ "$*" ]; do
     *) break                                      ;;
     esac
 done
+
+# Print out the vnc destination 
+echo "VNC destination: ${VNC_DEST}"
+
+# Correctly extract host and port from VNC_DEST
+VNC_HOST=${VNC_DEST%:*}
+VNC_PORT=${VNC_DEST##*:}
+
+echo "VNC Host: ${VNC_HOST}"
+echo "VNC Port: ${VNC_PORT}"
 
 if [ "$LISTEN" != "$PORT" ]; then
     HOST=${LISTEN%:*}
@@ -209,12 +270,15 @@ WEB=`realpath "${WEB}"`
 [ -n "${RECORD}" ] && RECORD=`realpath "${RECORD}"`
 
 echo "Starting webserver and WebSockets proxy on${HOST:+ host ${HOST}} port ${PORT}"
-${WEBSOCKIFY} ${SYSLOG_ARG} ${SSLONLY} ${FILEONLY_ARG} --web ${WEB} ${CERT:+--cert ${CERT}} ${KEY:+--key ${KEY}} ${LISTEN} ${VNC_DEST} ${HEARTBEAT_ARG} ${IDLETIMEOUT_ARG} ${RECORD:+--record ${RECORD}} ${TIMEOUT_ARG} ${WEBAUTH_ARG} ${AUTHPLUGIN_ARG} ${AUTHSOURCE_ARG} &
+# "${WEBSOCKIFY}" ${SYSLOG_ARG} ${SSLONLY} ${FILEONLY_ARG} --web ${WEB} ${CERT:+--cert ${CERT}} ${KEY:+--key ${KEY}} ${LISTEN} ${VNC_DEST} ${HEARTBEAT_ARG} ${IDLETIMEOUT_ARG} ${RECORD:+--record ${RECORD}} ${TIMEOUT_ARG} ${WEBAUTH_ARG} ${AUTHPLUGIN_ARG} ${AUTHSOURCE_ARG} &
+timeout 30m "${WEBSOCKIFY}" ${SYSLOG_ARG} ${SSLONLY} ${FILEONLY_ARG} --web "${WEB}" ${CERT:+--cert "${CERT}"} ${KEY:+--key "${KEY}"} ${LISTEN} ${VNC_DEST} ${HEARTBEAT_ARG} ${IDLETIMEOUT_ARG} ${RECORD:+--record ${RECORD}} ${TIMEOUT_ARG} ${WEBAUTH_ARG} ${AUTHPLUGIN_ARG} ${AUTHSOURCE_ARG} &
 proxy_pid="$!"
 sleep 1
-if [ -z "$proxy_pid" ] || ! ps -eo pid= | grep -w "$proxy_pid" > /dev/null; then
+
+if ! kill -0 "$proxy_pid" 2>/dev/null; then
     proxy_pid=
     echo "Failed to start WebSockets proxy"
+    kill $server_pid
     exit 1
 fi
 
@@ -224,7 +288,7 @@ fi
 
 echo -e "\n\nNavigate to this URL:\n"
 if [ "x$SSLONLY" == "x" ]; then
-    echo -e "    http://${HOST}:${PORT}/vnc.html?host=${HOST}&port=${PORT}\n"
+    echo -e "    http://${HOST}:${PORT}/vnc.html?host=${VNC_HOST}&port=${VNC_PORT}\n"
 else
     echo -e "    https://${HOST}:${PORT}/vnc.html?host=${HOST}&port=${PORT}\n"
 fi
@@ -232,3 +296,6 @@ fi
 echo -e "Press Ctrl-C to exit\n\n"
 
 wait ${proxy_pid}
+
+# Check the status
+check_status
