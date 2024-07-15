@@ -41,7 +41,15 @@ start_web_server() {
             done
 
             # Handle the request
-            if [[ "$request" == *"GET /shutdown_success"* ]]; then
+            if [[ "$request" == *"OPTIONS /shutdown"* ]]; then
+                echo -ne "HTTP/1.1 204 No Content\r\n"
+                echo -ne "Access-Control-Allow-Origin: *\r\n"
+                echo -ne "Access-Control-Allow-Methods: GET, POST, OPTIONS\r\n"
+                echo -ne "Access-Control-Allow-Headers: Content-Type\r\n"
+                echo -ne "Content-Length: 0\r\n"
+                echo -ne "\r\n"
+                echo "Handled OPTIONS request"
+            elif [[ "$request" == *"GET /shutdown_success"* ]]; then
                 echo -ne "HTTP/1.1 200 OK\r\n"
                 echo -ne "Access-Control-Allow-Origin: *\r\n"
                 echo -ne "Content-Length: 0\r\n"

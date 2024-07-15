@@ -50,8 +50,7 @@
          async function sendStatus(endpoint) {
             try {
                 const response = await fetch(`http://localhost:6081/${endpoint}`, {
-                    method: 'GET',
-                    headers: { 'Content-Type': 'application/json' }
+                    method: 'GET'
                 });
                 if (!response.ok) {
                     throw new Error(`Failed to send status: ${response.statusText}`);
