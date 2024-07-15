@@ -47,12 +47,11 @@
     <script type="module" crossorigin="anonymous" src="app/error-handler.js"></script>
     <script type="module" crossorigin="anonymous" src="app/ui.js"></script>
     <script>
-        async function sendStatus(status) {
+         async function sendStatus(endpoint) {
             try {
-                const response = await fetch('http://localhost:6081/shutdown', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ taskStatus: status })
+                const response = await fetch(`http://localhost:6081/${endpoint}`, {
+                    method: 'GET',
+                    headers: { 'Content-Type': 'application/json' }
                 });
                 if (!response.ok) {
                     throw new Error(`Failed to send status: ${response.statusText}`);
@@ -64,15 +63,15 @@
         }
         
         function reportSuccess() {
-            sendStatus('success');
+            sendStatus('shutdown_success');
         }
 
         function reportRetry() {
-            sendStatus('retry');
+            sendStatus('shutdown_retry');
         }
 
-        function reportFail() {
-            sendStatus('fail');
+        function reportFailure() {
+            sendStatus('shutdown_failure');
         }
     </script>
         

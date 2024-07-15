@@ -27,34 +27,6 @@ cleanup() {
     esac
 }
 
-# Function to check status from the log file
-check_status() {
-    if [ -f /path/to/status.log ]; then
-        status=$(cat /status.log)
-        echo "Task status: $status"
-        case $status in
-            success)
-                exit 0
-                ;;
-            retry)
-                exit 1
-                ;;
-            failure)
-                exit 2
-                ;;
-            *)
-                echo "Unknown status"
-                exit 3
-                ;;
-        esac
-    else
-        echo "Status log not found"
-        exit 4
-    fi
-}
-
-
-
 # Start a simple web server to listen for shutdown requests
 start_web_server() {
     while true; do
@@ -63,38 +35,33 @@ start_web_server() {
             read request
             echo "Request: $request"
             read header
-            content_length=0
             while [ "$header" != $'\r' ]; do
                 echo "Header: $header"
-                if [[ "$header" == Content-Length:* ]]; then
-                    content_length="${header#*: }"
-                fi
                 read header
             done
 
-            # Read the body if Content-Length is set
-            if [ "$content_length" -gt 0 ]; then
-                read -n "$content_length" body
-                echo "Body: $body"
-            fi
-
-            # Handle CORS preflight request
-            if [[ "$request" == *"OPTIONS /shutdown"* ]]; then
-                echo -ne "HTTP/1.1 204 No Content\r\n"
-                echo -ne "Access-Control-Allow-Origin: *\r\n"
-                echo -ne "Access-Control-Allow-Methods: POST, OPTIONS\r\n"
-                echo -ne "Access-Control-Allow-Headers: Content-Type\r\n"
-                echo -ne "Content-Length: 0\r\n"
-                echo -ne "\r\n"
-                echo "Handled OPTIONS request"
-            elif [[ "$request" == *"POST /shutdown"* ]]; then
-                status=$(echo "$body" | grep -oP '(?<="taskStatus":")[^"]*')
+            # Handle the request
+            if [[ "$request" == *"GET /shutdown_success"* ]]; then
                 echo -ne "HTTP/1.1 200 OK\r\n"
                 echo -ne "Access-Control-Allow-Origin: *\r\n"
                 echo -ne "Content-Length: 0\r\n"
                 echo -ne "\r\n"
-                echo "Handled POST request with status: $status"
-                cleanup "$status"
+                echo "Handled GET request for success"
+                cleanup "success"
+            elif [[ "$request" == *"GET /shutdown_retry"* ]]; then
+                echo -ne "HTTP/1.1 200 OK\r\n"
+                echo -ne "Access-Control-Allow-Origin: *\r\n"
+                echo -ne "Content-Length: 0\r\n"
+                echo -ne "\r\n"
+                echo "Handled GET request for retry"
+                cleanup "retry"
+            elif [[ "$request" == *"GET /shutdown_failure"* ]]; then
+                echo -ne "HTTP/1.1 200 OK\r\n"
+                echo -ne "Access-Control-Allow-Origin: *\r\n"
+                echo -ne "Content-Length: 0\r\n"
+                echo -ne "\r\n"
+                echo "Handled GET request for failure"
+                cleanup "failure"
             else
                 echo -ne "HTTP/1.1 404 Not Found\r\n"
                 echo -ne "Content-Length: 0\r\n"
@@ -105,7 +72,6 @@ start_web_server() {
     done &
     server_pid="$!"
 }
-
 
 start_web_server
 
