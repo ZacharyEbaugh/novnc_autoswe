@@ -49,7 +49,7 @@
     <script>
         async function sendStatus(status) {
             try {
-                const response = await fetch('http://localhost:8080/shutdown', {
+                const response = await fetch('http://localhost:6081/shutdown', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ taskStatus: status })
