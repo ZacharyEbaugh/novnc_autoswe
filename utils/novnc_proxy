@@ -2,14 +2,29 @@
 
 # Function to handle cleanup and shutdown
 cleanup() {
-    echo "Shutting down noVNC server..."
+    status="$1"
+    echo "Shutting down noVNC server with status: $status"
     if [ -n "$proxy_pid" ]; then
         kill "$proxy_pid"
     fi
     if [ -n "$server_pid" ]; then
         kill "$server_pid"
     fi
-    exit 0
+    case $status in
+        success)
+            exit 0
+            ;;
+        retry)
+            exit 1
+            ;;
+        failure)
+            exit 2
+            ;;
+        *)
+            echo "Unknown status"
+            exit 3
+            ;;
+    esac
 }
 
 # Function to check status from the log file
@@ -42,14 +57,34 @@ check_status() {
 start_web_server() {
     while true; do
         {
+            # Read the HTTP request
+            read request
+            read header
+            content_length=0
+            while [ "$header" != $'\r' ]; do
+                if [[ "$header" == Content-Length:* ]]; then
+                    content_length="${header#*: }"
+                fi
+                read header
+            done
+
+            # Read the body if Content-Length is set
+            if [ "$content_length" -gt 0 ]; then
+                read -n "$content_length" body
+            fi
+
+            # Send response headers
             echo -ne "HTTP/1.1 200 OK\r\n"
             echo -ne "Access-Control-Allow-Origin: *\r\n"
             echo -ne "Access-Control-Allow-Methods: POST, OPTIONS\r\n"
             echo -ne "Access-Control-Allow-Headers: Content-Type\r\n"
             echo -ne "Content-Length: 0\r\n"
             echo -ne "\r\n"
-            if [ "$REQUEST_METHOD" = "POST" ]; then
-                cleanup
+
+            # Handle the request
+            if [[ "$request" == *"POST /shutdown"* ]]; then
+                status=$(echo "$body" | grep -oP '(?<="taskStatus":")[^"]*')
+                cleanup "$status"
             fi
         } | nc -l -p 6081 -q 1
     done &
