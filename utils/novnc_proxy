@@ -41,9 +41,17 @@ check_status() {
 # Start a simple web server to listen for shutdown requests
 start_web_server() {
     while true; do
-        echo -e "HTTP/1.1 200 OK\n\n" | nc -l -p 6081 -q 1 | while read -r line; do
-            echo "$line" | grep -q "POST /shutdown" && cleanup
-        done
+        {
+            echo -ne "HTTP/1.1 200 OK\r\n"
+            echo -ne "Access-Control-Allow-Origin: *\r\n"
+            echo -ne "Access-Control-Allow-Methods: POST, OPTIONS\r\n"
+            echo -ne "Access-Control-Allow-Headers: Content-Type\r\n"
+            echo -ne "Content-Length: 0\r\n"
+            echo -ne "\r\n"
+            if [ "$REQUEST_METHOD" = "POST" ]; then
+                cleanup
+            fi
+        } | nc -l -p 6081 -q 1
     done &
     server_pid="$!"
 }
