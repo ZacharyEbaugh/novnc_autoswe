@@ -53,6 +53,7 @@ check_status() {
     fi
 }
 
+
 # Start a simple web server to listen for shutdown requests
 start_web_server() {
     while true; do
@@ -73,23 +74,31 @@ start_web_server() {
                 read -n "$content_length" body
             fi
 
-            # Send response headers
-            echo -ne "HTTP/1.1 200 OK\r\n"
-            echo -ne "Access-Control-Allow-Origin: *\r\n"
-            echo -ne "Access-Control-Allow-Methods: POST, OPTIONS\r\n"
-            echo -ne "Access-Control-Allow-Headers: Content-Type\r\n"
-            echo -ne "Content-Length: 0\r\n"
-            echo -ne "\r\n"
-
-            # Handle the request
-            if [[ "$request" == *"POST /shutdown"* ]]; then
+            # Handle CORS preflight request
+            if [[ "$request" == *"OPTIONS /shutdown"* ]]; then
+                echo -ne "HTTP/1.1 204 No Content\r\n"
+                echo -ne "Access-Control-Allow-Origin: *\r\n"
+                echo -ne "Access-Control-Allow-Methods: POST, OPTIONS\r\n"
+                echo -ne "Access-Control-Allow-Headers: Content-Type\r\n"
+                echo -ne "Content-Length: 0\r\n"
+                echo -ne "\r\n"
+            elif [[ "$request" == *"POST /shutdown"* ]]; then
                 status=$(echo "$body" | grep -oP '(?<="taskStatus":")[^"]*')
+                echo -ne "HTTP/1.1 200 OK\r\n"
+                echo -ne "Access-Control-Allow-Origin: *\r\n"
+                echo -ne "Content-Length: 0\r\n"
+                echo -ne "\r\n"
                 cleanup "$status"
+            else
+                echo -ne "HTTP/1.1 404 Not Found\r\n"
+                echo -ne "Content-Length: 0\r\n"
+                echo -ne "\r\n"
             fi
         } | nc -l -p 6081 -q 1
     done &
     server_pid="$!"
 }
+
 
 start_web_server
 
