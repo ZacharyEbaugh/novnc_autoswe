@@ -46,7 +46,7 @@
 
     <script type="module" crossorigin="anonymous" src="app/error-handler.js"></script>
     <script type="module" crossorigin="anonymous" src="app/ui.js"></script>
-    <script>
+    <!-- <script>
          async function sendStatus(endpoint) {
             try {
                 const response = await fetch(`http://localhost:6081/${endpoint}`, {
@@ -72,8 +72,7 @@
         function reportFailure() {
             sendStatus('shutdown_failure');
         }
-    </script>
-        
+    </script> -->
 </head>
 
 <body>
@@ -360,11 +359,11 @@
         <textarea id="noVNC_keyboardinput" autocapitalize="off"
             autocomplete="off" spellcheck="false" tabindex="-1"></textarea>
     </div>
-    <div class="status_stack">
+    <!-- <div class="status_stack">
         <button id="submit_success" class="status_button" onclick="reportSuccess()">Success</button>
         <button id="submit_retry" class="status_button" onclick="reportRetry()">Retry</button>
         <button id="submit_error" class="status_button" onclick="reportFail()">Fail</button>
-    </div>
+    </div> -->
     <audio id="noVNC_bell">
         <source src="app/sounds/bell.oga" type="audio/ogg">
         <source src="app/sounds/bell.mp3" type="audio/mpeg">

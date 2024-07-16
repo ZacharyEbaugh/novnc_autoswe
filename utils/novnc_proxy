@@ -1,87 +1,87 @@
 #!/usr/bin/env bash
 
-# Function to handle cleanup and shutdown
-cleanup() {
-    status="$1"
-    echo "Shutting down noVNC server with status: $status"
-    if [ -n "$proxy_pid" ]; then
-        kill "$proxy_pid"
-    fi
-    if [ -n "$server_pid" ]; then
-        kill "$server_pid"
-    fi
-    case $status in
-        success)
-            exit 0
-            ;;
-        retry)
-            exit 1
-            ;;
-        failure)
-            exit 2
-            ;;
-        *)
-            echo "Unknown status"
-            exit 3
-            ;;
-    esac
-}
+# # Function to handle cleanup and shutdown
+# cleanup() {
+#     status="$1"
+#     echo "Shutting down noVNC server with status: $status"
+#     if [ -n "$proxy_pid" ]; then
+#         kill "$proxy_pid"
+#     fi
+#     if [ -n "$server_pid" ]; then
+#         kill "$server_pid"
+#     fi
+#     case $status in
+#         success)
+#             exit 0
+#             ;;
+#         retry)
+#             exit 1
+#             ;;
+#         failure)
+#             exit 2
+#             ;;
+#         *)
+#             echo "Unknown status"
+#             exit 3
+#             ;;
+#     esac
+# }
 
-# Start a simple web server to listen for shutdown requests
-start_web_server() {
-    while true; do
-        {
-            # Read the HTTP request
-            read request
-            echo "Request: $request"
-            read header
-            while [ "$header" != $'\r' ]; do
-                echo "Header: $header"
-                read header
-            done
+# # Start a simple web server to listen for shutdown requests
+# start_web_server() {
+#     while true; do
+#         {
+#             # Read the HTTP request
+#             read request
+#             echo "Request: $request"
+#             read header
+#             while [ "$header" != $'\r' ]; do
+#                 echo "Header: $header"
+#                 read header
+#             done
 
-            # Handle the request
-            if [[ "$request" == *"OPTIONS /shutdown"* ]]; then
-                echo -ne "HTTP/1.1 204 No Content\r\n"
-                echo -ne "Access-Control-Allow-Origin: *\r\n"
-                echo -ne "Access-Control-Allow-Methods: GET, POST, OPTIONS\r\n"
-                echo -ne "Access-Control-Allow-Headers: Content-Type\r\n"
-                echo -ne "Content-Length: 0\r\n"
-                echo -ne "\r\n"
-                echo "Handled OPTIONS request"
-            elif [[ "$request" == *"GET /shutdown_success"* ]]; then
-                echo -ne "HTTP/1.1 200 OK\r\n"
-                echo -ne "Access-Control-Allow-Origin: *\r\n"
-                echo -ne "Content-Length: 0\r\n"
-                echo -ne "\r\n"
-                echo "Handled GET request for success"
-                cleanup "success"
-            elif [[ "$request" == *"GET /shutdown_retry"* ]]; then
-                echo -ne "HTTP/1.1 200 OK\r\n"
-                echo -ne "Access-Control-Allow-Origin: *\r\n"
-                echo -ne "Content-Length: 0\r\n"
-                echo -ne "\r\n"
-                echo "Handled GET request for retry"
-                cleanup "retry"
-            elif [[ "$request" == *"GET /shutdown_failure"* ]]; then
-                echo -ne "HTTP/1.1 200 OK\r\n"
-                echo -ne "Access-Control-Allow-Origin: *\r\n"
-                echo -ne "Content-Length: 0\r\n"
-                echo -ne "\r\n"
-                echo "Handled GET request for failure"
-                cleanup "failure"
-            else
-                echo -ne "HTTP/1.1 404 Not Found\r\n"
-                echo -ne "Content-Length: 0\r\n"
-                echo -ne "\r\n"
-                echo "Handled unknown request"
-            fi
-        } | nc -l -p 6081 -q 1
-    done &
-    server_pid="$!"
-}
+#             # Handle the request
+#             if [[ "$request" == *"OPTIONS /shutdown"* ]]; then
+#                 echo -ne "HTTP/1.1 204 No Content\r\n"
+#                 echo -ne "Access-Control-Allow-Origin: *\r\n"
+#                 echo -ne "Access-Control-Allow-Methods: GET, POST, OPTIONS\r\n"
+#                 echo -ne "Access-Control-Allow-Headers: Content-Type\r\n"
+#                 echo -ne "Content-Length: 0\r\n"
+#                 echo -ne "\r\n"
+#                 echo "Handled OPTIONS request"
+#             elif [[ "$request" == *"GET /shutdown_success"* ]]; then
+#                 echo -ne "HTTP/1.1 200 OK\r\n"
+#                 echo -ne "Access-Control-Allow-Origin: *\r\n"
+#                 echo -ne "Content-Length: 0\r\n"
+#                 echo -ne "\r\n"
+#                 echo "Handled GET request for success"
+#                 cleanup "success"
+#             elif [[ "$request" == *"GET /shutdown_retry"* ]]; then
+#                 echo -ne "HTTP/1.1 200 OK\r\n"
+#                 echo -ne "Access-Control-Allow-Origin: *\r\n"
+#                 echo -ne "Content-Length: 0\r\n"
+#                 echo -ne "\r\n"
+#                 echo "Handled GET request for retry"
+#                 cleanup "retry"
+#             elif [[ "$request" == *"GET /shutdown_failure"* ]]; then
+#                 echo -ne "HTTP/1.1 200 OK\r\n"
+#                 echo -ne "Access-Control-Allow-Origin: *\r\n"
+#                 echo -ne "Content-Length: 0\r\n"
+#                 echo -ne "\r\n"
+#                 echo "Handled GET request for failure"
+#                 cleanup "failure"
+#             else
+#                 echo -ne "HTTP/1.1 404 Not Found\r\n"
+#                 echo -ne "Content-Length: 0\r\n"
+#                 echo -ne "\r\n"
+#                 echo "Handled unknown request"
+#             fi
+#         } | nc -l -p 6081 -q 1
+#     done &
+#     server_pid="$!"
+# }
 
-start_web_server
+# start_web_server
 
 # Copyright (C) 2018 The noVNC Authors
 # Licensed under MPL 2.0 or any later version (see LICENSE.txt)
